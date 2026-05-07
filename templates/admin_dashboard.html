@@ -1,0 +1,1199 @@
+{% extends 'base.html' %} {% block content %}
+<body>
+  <!-- Sidebar -->
+  {% include '_partials/sidebar.html'%}
+
+  <!-- Header main -->
+  {% include '_partials/header_main.html'%}
+
+  <div class="main main-app p-3 p-lg-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <div>
+        <h4 class="main-title mb-0">Admin Dashboard</h4>
+        <p class="text-secondary mb-0">Manage all database records</p>
+      </div>
+    </div>
+
+    {% include '_partials/messages.html'%}
+
+    <ul id="adminTabs" role="tablist" class="nav nav-tabs mb-4">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="sports-tab" data-bs-toggle="tab" data-bs-target="#sports" type="button" role="tab">
+          Sports
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab">
+          Teams
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="events-tab" data-bs-toggle="tab" data-bs-target="#events" type="button" role="tab">
+          Events
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="competitions-tab" data-bs-toggle="tab" data-bs-target="#competitions" type="button" role="tab">
+          Competitions
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
+          Users
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="adminTabsContent">
+      <!-- Sports Tab -->
+      <div class="tab-pane fade show active" id="sports" role="tabpanel">
+        <div class="card card-one">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">All Sports</h6>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSportModal">
+              <i class="ri-add-line"></i> Add Sport
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-agent mb-0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for sport in sports %}
+                  <tr>
+                    <td>{{ sport.id }}</td>
+                    <td>{{ sport.name }}</td>
+                    <td><span class="badge bg-{% if sport.sport_type == 'Single-Player' %}primary{% else %}warning{% endif %}">{{ sport.sport_type }}</span></td>
+                    <td>
+                      <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ sport.name }}?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="sport_id" value="{{ sport.id }}">
+                        <button type="submit" name="delete_sport" class="btn btn-danger btn-sm">
+                          <i class="ri-delete-bin-line"></i> Delete
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center">No sports found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teams Tab -->
+      <div class="tab-pane fade" id="teams" role="tabpanel">
+        <div class="card card-one">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">All Teams</h6>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTeamModal">
+              <i class="ri-add-line"></i> Add Team
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-agent mb-0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Sport</th>
+                    <th>Members</th>
+                    <th>Rating</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for team in teams %}
+                  <tr>
+                    <td>{{ team.id }}</td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="avatar">
+                          {% if team.avatar %}
+                            <img src="{{ team.avatar.url }}" alt="">
+                          {% else %}
+                            <span class="avatar-initial bg-primary">{{ team.name|first|upper }}</span>
+                          {% endif %}
+                        </div>
+                        <div>
+                          <a href="#" class="text-dark text-decoration-none team-detail-link" 
+                             data-bs-toggle="modal" 
+                             data-bs-target="#teamDetailModal"
+                             data-team-id="{{ team.id }}"
+                             data-team-name="{{ team.name }}"
+                             data-team-sport="{{ team.sport.id }}"
+                             data-team-sport-name="{{ team.sport.name }}"
+                             data-team-rating="{{ team.rating_points }}"
+                             data-team-wins="{{ team.wins }}"
+                             data-team-losses="{{ team.losses }}"
+                             data-team-members="{% for member in team.members.all %}{{ member.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                             data-team-avatar="{% if team.avatar %}{{ team.avatar.url }}{% endif %}">
+                            <strong>{{ team.name }}</strong>
+                          </a>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ team.sport.name }}</td>
+                    <td>{{ team.members.count }}</td>
+                    <td>{{ team.rating_points }}</td>
+                    <td>{{ team.wins }}</td>
+                    <td>{{ team.losses }}</td>
+                    <td>
+                      <button type="button" class="btn btn-primary btn-sm me-1 edit-team-btn" 
+                        data-team-id="{{ team.id }}"
+                        data-team-name="{{ team.name }}"
+                        data-team-sport="{{ team.sport.id }}"
+                        data-team-members="{% for member in team.members.all %}{{ member.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#editTeamModal">
+                        <i class="ri-edit-line"></i> Edit
+                      </button>
+                      <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ team.name }}?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="team_id" value="{{ team.id }}">
+                        <button type="submit" name="delete_team" class="btn btn-danger btn-sm">
+                          <i class="ri-delete-bin-line"></i> Delete
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="8" class="text-center">No teams found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Events Tab -->
+      <div class="tab-pane fade" id="events" role="tabpanel">
+        <div class="card card-one">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">All Events</h6>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addEventModal">
+              <i class="ri-add-line"></i> Add Event
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-agent mb-0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Sport</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Location</th>
+                    <th>Creator</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for event in events %}
+                  <tr>
+                    <td>{{ event.id }}</td>
+                    <td>{{ event.name }}</td>
+                    <td>{{ event.sport.name }}</td>
+                    <td>{{ event.start_date_time|date:"M d, Y H:i" }}</td>
+                    <td>{{ event.end_date_time|date:"M d, Y H:i" }}</td>
+                    <td>{{ event.location }}</td>
+                    <td>{{ event.creator.name }}</td>
+                    <td>
+                      <button type="button" class="btn btn-info btn-sm me-1 manage-photos-btn" 
+                        data-event-id="{{ event.id }}"
+                        data-event-name="{{ event.name }}"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#eventPhotosModal">
+                        <i class="ri-image-line"></i> Photos
+                      </button>
+                      <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ event.name }}?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="event_id" value="{{ event.id }}">
+                        <button type="submit" name="delete_event" class="btn btn-danger btn-sm">
+                          <i class="ri-delete-bin-line"></i> Delete
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="8" class="text-center">No events found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Competitions Tab -->
+      <div class="tab-pane fade" id="competitions" role="tabpanel">
+        <div class="card card-one">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">All Competitions</h6>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCompetitionModal">
+              <i class="ri-add-line"></i> Add Competition
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-agent mb-0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Sport</th>
+                    <th>Side A</th>
+                    <th>Side B</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Start Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for competition in competitions %}
+                  <tr>
+                    <td>{{ competition.id }}</td>
+                    <td>{{ competition.name }}</td>
+                    <td>{{ competition.sport.name }}</td>
+                    <td>{{ competition.side_a_name }}</td>
+                    <td>{{ competition.side_b_name }}</td>
+                    <td>{{ competition.side_a_score }} : {{ competition.side_b_score }}</td>
+                    <td><span class="badge bg-{% if competition.status == 'Finished' %}success{% else %}warning{% endif %}">{{ competition.status }}</span></td>
+                    <td>{{ competition.start_date_time|date:"M d, Y H:i" }}</td>
+                    <td>
+                      <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ competition.name }}?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="competition_id" value="{{ competition.id }}">
+                        <button type="submit" name="delete_competition" class="btn btn-danger btn-sm">
+                          <i class="ri-delete-bin-line"></i> Delete
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="9" class="text-center">No competitions found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Tab -->
+      <div class="tab-pane fade" id="users" role="tabpanel">
+        <div class="card card-one">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">All Users</h6>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+              <i class="ri-add-line"></i> Add User
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-agent mb-0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Rating Points</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for user in users %}
+                  <tr>
+                    <td>{{ user.id }}</td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="avatar">
+                          {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}" alt="">
+                          {% else %}
+                            <span class="avatar-initial bg-primary">{{ user.name|first|upper }}</span>
+                          {% endif %}
+                        </div>
+                        <div>{{ user.name }}</div>
+                      </div>
+                    </td>
+                    <td>@{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.rating_points }}</td>
+                    <td>{{ user.wins }}</td>
+                    <td>{{ user.losses }}</td>
+                    <td>
+                      {% if user.is_active %}
+                        <span class="badge bg-success">Active</span>
+                      {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ user.name }}? This action cannot be undone.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <button type="submit" name="delete_user" class="btn btn-danger btn-sm">
+                          <i class="ri-delete-bin-line"></i> Delete
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="9" class="text-center">No users found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% include '_partials/inner_footer.html'%}
+  </div>
+
+  <!-- Add Sport Modal -->
+  <div class="modal fade" id="addSportModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New Sport</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST">
+          {% csrf_token %}
+          <div class="modal-body">
+            {% load widget_tweaks %}
+            <div class="mb-3">
+              <label class="form-label">Sport Name</label>
+              {{ sport_form.name|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Sport Type</label>
+              {{ sport_form.sport_type|add_class:"form-select" }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+            <button type="submit" name="add_sport" class="btn btn-primary">Add Sport</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Team Modal -->
+  <div class="modal fade" id="addTeamModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New Team</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data" id="addTeamForm">
+          {% csrf_token %}
+          <div class="modal-body">
+            {% load widget_tweaks %}
+            <div class="mb-3">
+              <label class="form-label">Team Name</label>
+              {{ team_form.name|add_class:"form-control"|attr:"id:add_team_name" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Sport</label>
+              {{ team_form.sport|add_class:"form-select"|attr:"id:add_team_sport" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Avatar</label>
+              {{ team_form.avatar|add_class:"form-control"|attr:"id:add_team_avatar" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Members</label>
+              {{ team_form.members|add_class:"form-select"|attr:"id:add_team_members" }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+            <button type="submit" name="add_team" class="btn btn-primary">Add Team</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Detail Modal -->
+  <div class="modal fade" id="teamDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Team Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <!-- Team Information -->
+            <div class="col-md-4">
+              <div class="card card-one mb-3">
+                <div class="card-body text-center">
+                  <div class="avatar avatar-xl mb-3 mx-auto">
+                    <img id="detail_team_avatar" src="" alt="" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                    <span id="detail_team_avatar_initials" class="avatar-initial bg-primary" style="display: none; width: 100px; height: 100px; font-size: 2rem;"></span>
+                  </div>
+                  <h4 id="detail_team_name" class="mb-2"></h4>
+                  <p class="text-muted mb-3" id="detail_team_sport"></p>
+                  
+                  <div class="row g-3 mb-3">
+                    <div class="col-6">
+                      <div class="text-center">
+                        <h3 class="mb-0" id="detail_team_rating">0</h3>
+                        <small class="text-muted">Rating Points</small>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="text-center">
+                        <h3 class="mb-0" id="detail_team_members_count">0</h3>
+                        <small class="text-muted">Members</small>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="row g-3">
+                    <div class="col-6">
+                      <div class="text-center">
+                        <h5 class="mb-0 text-success" id="detail_team_wins">0</h5>
+                        <small class="text-muted">Wins</small>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="text-center">
+                        <h5 class="mb-0 text-danger" id="detail_team_losses">0</h5>
+                        <small class="text-muted">Losses</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Team Members Section -->
+            <div class="col-md-8">
+              <div class="card card-one">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">Team Members</h6>
+                  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editTeamModal" id="editTeamFromDetailBtn">
+                    <i class="ri-edit-line"></i> Edit Members
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div id="detail_current_members">
+                    <p class="text-muted text-center">Loading members...</p>
+                  </div>
+                  
+                  <!-- Add Member Section -->
+                  <hr class="my-4">
+                  <h6 class="mb-3">Add Members to Team</h6>
+                  <form method="POST" id="addMemberForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="team_id" id="detail_team_id">
+                    <div class="mb-3">
+                      <label class="form-label">Select Users to Add</label>
+                      <select name="members_to_add" class="form-select" id="members_to_add" multiple size="8">
+                        {% for user in users %}
+                          <option value="{{ user.id }}">{{ user.name }} ({{ user.email }}) - Rating: {{ user.rating_points }}</option>
+                        {% endfor %}
+                      </select>
+                      <small class="text-muted">Hold Ctrl (or Cmd on Mac) to select multiple users. Already added members are disabled.</small>
+                    </div>
+                    <button type="submit" name="add_members_to_team" class="btn btn-primary">
+                      <i class="ri-add-line"></i> Add Selected Members
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Team Modal -->
+  <div class="modal fade" id="editTeamModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Team Composition</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data" id="editTeamForm">
+          {% csrf_token %}
+          <input type="hidden" name="team_id" id="edit_team_id">
+          <div class="modal-body">
+            {% load widget_tweaks %}
+            <div class="mb-3">
+              <label class="form-label">Team Name</label>
+              <input type="text" name="name" class="form-control" id="edit_team_name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Sport</label>
+              <select name="sport" class="form-select" id="edit_team_sport" required>
+                {% for sport in sports %}
+                  {% if sport.sport_type == 'Team-Player' %}
+                    <option value="{{ sport.id }}">{{ sport.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Avatar</label>
+              <input type="file" name="avatar" class="form-control" id="edit_team_avatar" accept="image/*">
+              <small class="text-muted">Leave empty to keep current avatar</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Members</label>
+              <select name="members" class="form-select" id="edit_team_members" multiple required size="10">
+                {% for user in users %}
+                  <option value="{{ user.id }}">{{ user.name }} ({{ user.email }})</option>
+                {% endfor %}
+              </select>
+              <small class="text-muted">Hold Ctrl (or Cmd on Mac) to select multiple members</small>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+            <button type="submit" name="update_team" class="btn btn-primary">Update Team</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Event Modal -->
+  <div class="modal fade" id="addEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New Event</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST">
+          {% csrf_token %}
+          <div class="modal-body">
+            {% load widget_tweaks %}
+            <div class="mb-3">
+              <label class="form-label">Event Name</label>
+              {{ event_form.name|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Sport</label>
+              {{ event_form.sport|add_class:"form-select" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Start Date/Time</label>
+              {{ event_form.start_date_time|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">End Date/Time</label>
+              {{ event_form.end_date_time|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Location</label>
+              {{ event_form.location|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              {{ event_form.description|add_class:"form-control"|attr:"rows:3" }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+            <button type="submit" name="add_event" class="btn btn-primary">Add Event</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Competition Modal -->
+  <div class="modal fade" id="addCompetitionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New Competition</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST">
+          {% csrf_token %}
+          <div class="modal-body">
+            {% load widget_tweaks %}
+            <div class="mb-3">
+              <label class="form-label">Competition Name</label>
+              {{ competition_form.name|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Sport</label>
+              {{ competition_form.sport|add_class:"form-select"|attr:"id:admin_competition_sport"|attr:"data-api-url:/api/competitors/" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Start Date/Time</label>
+              {{ competition_form.start_date_time|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">End Date/Time</label>
+              {{ competition_form.end_date_time|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Competitor A</label>
+              {{ competition_form.side_a|add_class:"form-select"|attr:"id:admin_side_a" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Competitor B</label>
+              {{ competition_form.side_b|add_class:"form-select"|attr:"id:admin_side_b" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Location</label>
+              {{ competition_form.location|add_class:"form-control" }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              {{ competition_form.description|add_class:"form-control"|attr:"rows:3" }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+            <button type="submit" name="add_competition" class="btn btn-primary">Add Competition</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST" id="addUserForm">
+          {% csrf_token %}
+          <div class="modal-body">
+            {% load widget_tweaks %}
+            {% if user_creation_form.errors %}
+              <div class="alert alert-danger">
+                <strong>Please correct the errors below:</strong>
+                <ul class="mb-0">
+                  {% for field, errors in user_creation_form.errors.items %}
+                    {% for error in errors %}
+                      <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+            <div class="mb-3">
+              <label class="form-label">Full Name <span class="text-danger">*</span></label>
+              {{ user_creation_form.name|add_class:"form-control" }}
+              {% if user_creation_form.name.errors %}
+                <div class="text-danger small">{{ user_creation_form.name.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Username <span class="text-danger">*</span></label>
+              {{ user_creation_form.username|add_class:"form-control" }}
+              {% if user_creation_form.username.errors %}
+                <div class="text-danger small">{{ user_creation_form.username.errors }}</div>
+              {% endif %}
+              <small class="text-muted">Must be at least 5 characters long</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              {{ user_creation_form.email|add_class:"form-control" }}
+              {% if user_creation_form.email.errors %}
+                <div class="text-danger small">{{ user_creation_form.email.errors }}</div>
+              {% endif %}
+              <small class="text-muted">Must be @ucentralasia.org email address</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password <span class="text-danger">*</span></label>
+              {{ user_creation_form.password1|add_class:"form-control" }}
+              {% if user_creation_form.password1.errors %}
+                <div class="text-danger small">{{ user_creation_form.password1.errors }}</div>
+              {% endif %}
+              <small class="text-muted">Must be at least 8 characters long</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
+              {{ user_creation_form.password2|add_class:"form-control" }}
+              {% if user_creation_form.password2.errors %}
+                <div class="text-danger small">{{ user_creation_form.password2.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="activate_user" id="activateUserCheck" value="1">
+                <label class="form-check-label" for="activateUserCheck">
+                  Activate user immediately (user can login without email verification)
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+            <button type="submit" name="add_user" class="btn btn-primary">Add User</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Team members data storage
+    let currentTeamMembers = [];
+    let allUsers = [];
+    
+    // Fetch team details when team name is clicked
+    document.addEventListener('DOMContentLoaded', function() {
+      // Store all users data from the page
+      const userOptions = document.querySelectorAll('#members_to_add option, #edit_team_members option');
+      allUsers = Array.from(userOptions).map(option => ({
+        id: option.value,
+        text: option.text
+      }));
+      
+      // Handle team detail link clicks
+      const teamDetailLinks = document.querySelectorAll('.team-detail-link');
+      teamDetailLinks.forEach(link => {
+        link.addEventListener('click', function() {
+          const teamId = this.getAttribute('data-team-id');
+          const teamName = this.getAttribute('data-team-name');
+          const sportId = this.getAttribute('data-team-sport');
+          const sportName = this.getAttribute('data-team-sport-name');
+          const rating = this.getAttribute('data-team-rating');
+          const wins = this.getAttribute('data-team-wins');
+          const losses = this.getAttribute('data-team-losses');
+          const membersStr = this.getAttribute('data-team-members');
+          const avatarUrl = this.getAttribute('data-team-avatar');
+          
+          // Parse member IDs
+          const memberIds = membersStr ? membersStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
+          currentTeamMembers = memberIds;
+          
+          // Populate team detail modal
+          document.getElementById('detail_team_id').value = teamId;
+          document.getElementById('detail_team_name').textContent = teamName;
+          document.getElementById('detail_team_sport').textContent = sportName;
+          document.getElementById('detail_team_rating').textContent = rating || '0';
+          document.getElementById('detail_team_wins').textContent = wins || '0';
+          document.getElementById('detail_team_losses').textContent = losses || '0';
+          document.getElementById('detail_team_members_count').textContent = memberIds.length;
+          
+          // Set avatar
+          const avatarImg = document.getElementById('detail_team_avatar');
+          const avatarInitials = document.getElementById('detail_team_avatar_initials');
+          if (avatarUrl) {
+            avatarImg.src = avatarUrl;
+            avatarImg.style.display = 'block';
+            avatarInitials.style.display = 'none';
+          } else {
+            avatarImg.style.display = 'none';
+            avatarInitials.style.display = 'flex';
+            avatarInitials.textContent = teamName.charAt(0).toUpperCase();
+          }
+          
+          // Fetch and display team members
+          fetchTeamMembers(teamId, memberIds);
+          
+          // Update edit button to use same team data
+          document.getElementById('editTeamFromDetailBtn').onclick = function() {
+            loadTeamDataForEdit(teamId, teamName, sportId, memberIds);
+            // Close detail modal and open edit modal
+            $('#teamDetailModal').modal('hide');
+            setTimeout(() => {
+              $('#editTeamModal').modal('show');
+            }, 300);
+          };
+          
+          // Update members dropdown to exclude already-added members
+          updateMembersDropdown(memberIds);
+        });
+      });
+      
+      // Handle edit team button clicks (from table)
+      const editButtons = document.querySelectorAll('.edit-team-btn');
+      editButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const teamId = this.getAttribute('data-team-id');
+          const teamName = this.getAttribute('data-team-name');
+          const sportId = this.getAttribute('data-team-sport');
+          const membersStr = this.getAttribute('data-team-members');
+          const memberIds = membersStr ? membersStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
+          loadTeamDataForEdit(teamId, teamName, sportId, memberIds);
+        });
+      });
+      
+      // Function to load team data for edit modal
+      function loadTeamDataForEdit(teamId, teamName, sportId, memberIds) {
+        document.getElementById('edit_team_id').value = teamId;
+        document.getElementById('edit_team_name').value = teamName;
+        document.getElementById('edit_team_sport').value = sportId;
+        
+        const membersSelect = document.getElementById('edit_team_members');
+        Array.from(membersSelect.options).forEach(option => {
+          option.selected = memberIds.includes(parseInt(option.value));
+        });
+      }
+      
+      // Function to fetch and display team members
+      async function fetchTeamMembers(teamId, memberIds) {
+        const membersContainer = document.getElementById('detail_current_members');
+        
+        if (memberIds.length === 0) {
+          membersContainer.innerHTML = '<p class="text-muted text-center">No members in this team yet.</p>';
+          return;
+        }
+        
+        // Show loading
+        membersContainer.innerHTML = '<p class="text-muted text-center">Loading members...</p>';
+        
+        // Fetch user details for each member
+        try {
+          let membersHtml = '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Avatar</th><th>Name</th><th>Email</th><th>Rating</th><th>Wins</th><th>Losses</th><th>Action</th></tr></thead><tbody>';
+          
+          for (const memberId of memberIds) {
+            try {
+              const response = await fetch(`/api/user/${memberId}/`);
+              const user = await response.json();
+              
+              // Handle avatar URL
+              let avatarUrl = user.avatar || '';
+              if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('/')) {
+                avatarUrl = '/images/' + avatarUrl;
+              }
+              
+              let avatarHtml = '';
+              if (avatarUrl) {
+                avatarHtml = `<div class="avatar" style="width: 40px; height: 40px;">
+                  <img src="${avatarUrl}" alt="${user.name || 'User'}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <span class="avatar-initial bg-primary" style="display: none; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 50%; color: white;">${(user.name || 'U').charAt(0).toUpperCase()}</span>
+                </div>`;
+              } else {
+                avatarHtml = `<div class="avatar" style="width: 40px; height: 40px;">
+                  <span class="avatar-initial bg-primary" style="display: flex; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 50%; color: white;">${(user.name || 'U').charAt(0).toUpperCase()}</span>
+                </div>`;
+              }
+              
+              membersHtml += `<tr>
+                <td>${avatarHtml}</td>
+                <td><strong>${user.name || 'N/A'}</strong></td>
+                <td>${user.email || 'N/A'}</td>
+                <td>${user.rating_points || 0}</td>
+                <td>${user.wins || 0}</td>
+                <td>${user.losses || 0}</td>
+                <td>
+                  <form method="POST" style="display: inline;" class="remove-member-form" onsubmit="return confirm('Remove ${user.name} from team?');">
+                    <input type="hidden" name="csrfmiddlewaretoken" class="csrf-token-input">
+                    <input type="hidden" name="team_id" value="${teamId}">
+                    <input type="hidden" name="member_id" value="${memberId}">
+                    <button type="submit" name="remove_member_from_team" class="btn btn-danger btn-sm">
+                      <i class="ri-close-line"></i> Remove
+                    </button>
+                  </form>
+                </td>
+              </tr>`;
+            } catch (error) {
+              console.error(`Error fetching user ${memberId}:`, error);
+              // Fallback to basic info from option
+              const userOption = Array.from(document.querySelectorAll('#edit_team_members option')).find(opt => opt.value == memberId);
+              if (userOption) {
+                const userText = userOption.text;
+                const match = userText.match(/^(.+?)\s*\((.+?)\)/);
+                const name = match ? match[1] : userText;
+                const email = match ? match[2] : '';
+                membersHtml += `<tr>
+                  <td><span class="avatar-initial bg-primary">${(name || 'U').charAt(0).toUpperCase()}</span></td>
+                  <td><strong>${name}</strong></td>
+                  <td>${email}</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <form method="POST" style="display: inline;" class="remove-member-form" onsubmit="return confirm('Remove ${name} from team?');">
+                      <input type="hidden" name="csrfmiddlewaretoken" class="csrf-token-input">
+                      <input type="hidden" name="team_id" value="${teamId}">
+                      <input type="hidden" name="member_id" value="${memberId}">
+                      <button type="submit" name="remove_member_from_team" class="btn btn-danger btn-sm">
+                        <i class="ri-close-line"></i> Remove
+                      </button>
+                    </form>
+                  </td>
+                </tr>`;
+              }
+            }
+          }
+          
+          membersHtml += '</tbody></table></div>';
+          membersContainer.innerHTML = membersHtml;
+          
+          // Set CSRF token for all dynamically created remove member forms
+          const csrfTokenInput = document.querySelector('#addMemberForm input[name=csrfmiddlewaretoken]');
+          const csrfToken = csrfTokenInput ? csrfTokenInput.value : getCookie('csrftoken');
+          if (csrfToken) {
+            document.querySelectorAll('#detail_current_members .csrf-token-input').forEach(input => {
+              input.value = csrfToken;
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching team members:', error);
+          membersContainer.innerHTML = '<p class="text-danger text-center">Error loading members. Please refresh the page.</p>';
+        }
+      }
+      
+      // Helper function to get CSRF token from cookie
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue || '';
+      }
+      
+      // Function to update members dropdown to exclude already-added members
+      function updateMembersDropdown(addedMemberIds) {
+        const membersSelect = document.getElementById('members_to_add');
+        if (!membersSelect) return;
+        
+        Array.from(membersSelect.options).forEach(option => {
+          const memberId = parseInt(option.value);
+          if (isNaN(memberId)) return; // Skip empty options
+          
+          if (addedMemberIds.includes(memberId)) {
+            option.disabled = true;
+            option.style.opacity = '0.5';
+            option.style.textDecoration = 'line-through';
+          } else {
+            option.disabled = false;
+            option.style.opacity = '1';
+            option.style.textDecoration = 'none';
+          }
+        });
+      }
+    });
+
+    // Reset add team form when modal is closed
+    document.getElementById('addTeamModal').addEventListener('hidden.bs.modal', function () {
+      document.getElementById('addTeamForm').reset();
+    });
+
+    // Reset edit team form when modal is closed
+    document.getElementById('editTeamModal').addEventListener('hidden.bs.modal', function () {
+      document.getElementById('editTeamForm').reset();
+      document.getElementById('edit_team_id').value = '';
+      const membersSelect = document.getElementById('edit_team_members');
+      Array.from(membersSelect.options).forEach(option => {
+        option.selected = false;
+      });
+    });
+    
+    // Refresh team detail modal after adding members
+    document.getElementById('teamDetailModal').addEventListener('hidden.bs.modal', function () {
+      // Reset the form
+      document.getElementById('addMemberForm').reset();
+      // Reset members dropdown
+      const membersSelect = document.getElementById('members_to_add');
+      Array.from(membersSelect.options).forEach(option => {
+        option.disabled = false;
+        option.selected = false;
+        option.style.opacity = '1';
+      });
+    });
+    
+    // Reset add user form when modal is closed
+    document.getElementById('addUserModal').addEventListener('hidden.bs.modal', function () {
+      document.getElementById('addUserForm').reset();
+      document.getElementById('activateUserCheck').checked = false;
+    });
+    
+    // Handle event photos modal
+    const managePhotosButtons = document.querySelectorAll('.manage-photos-btn');
+    managePhotosButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const eventId = this.getAttribute('data-event-id');
+        const eventName = this.getAttribute('data-event-name');
+        document.getElementById('eventPhotosModalTitle').textContent = `Photos for: ${eventName}`;
+        document.getElementById('eventPhotosEventId').value = eventId;
+        loadEventPhotos(eventId);
+      });
+    });
+    
+    // Handle photo upload form submission
+    const uploadEventPhotosForm = document.getElementById('uploadEventPhotosForm');
+    if (uploadEventPhotosForm) {
+      uploadEventPhotosForm.addEventListener('submit', function(e) {
+        // Form will submit normally, but we'll reload photos after a delay
+        // The page will refresh after successful upload, so photos will be loaded
+        setTimeout(() => {
+          const eventId = document.getElementById('eventPhotosEventId').value;
+          if (eventId) {
+            loadEventPhotos(eventId);
+          }
+        }, 1000);
+      });
+    }
+    
+    // Refresh photos when modal is shown (in case photos were added/removed)
+    const eventPhotosModal = document.getElementById('eventPhotosModal');
+    if (eventPhotosModal) {
+      eventPhotosModal.addEventListener('shown.bs.modal', function() {
+        const eventId = document.getElementById('eventPhotosEventId').value;
+        if (eventId) {
+          loadEventPhotos(eventId);
+        }
+      });
+    }
+    
+    // Function to load event photos
+    async function loadEventPhotos(eventId) {
+      const photosContainer = document.getElementById('eventPhotosContainer');
+      photosContainer.innerHTML = '<p class="text-center text-muted">Loading photos...</p>';
+      
+      try {
+        const response = await fetch(`/api/event/${eventId}/photos/`, {
+          headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch photos');
+        }
+        
+        const photos = await response.json();
+        
+        if (photos.length === 0) {
+          photosContainer.innerHTML = '<p class="text-center text-muted">No photos uploaded yet.</p>';
+          return;
+        }
+        
+        let photosHtml = '<div class="row g-3">';
+        photos.forEach(photo => {
+          const photoUrl = photo.photo_url || photo.photo;
+          photosHtml += `
+            <div class="col-md-4 col-lg-3">
+              <div class="card">
+                <img src="${photoUrl}" class="card-img-top" alt="Event photo" style="height: 200px; object-fit: cover;">
+                <div class="card-body p-2">
+                  <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this photo?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="photo_id" value="${photo.id}">
+                    <button type="submit" name="delete_event_photo" class="btn btn-danger btn-sm w-100">
+                      <i class="ri-delete-bin-line"></i> Delete
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        photosHtml += '</div>';
+        photosContainer.innerHTML = photosHtml;
+      } catch (error) {
+        console.error('Error loading photos:', error);
+        photosContainer.innerHTML = '<p class="text-center text-danger">Error loading photos. Please try again.</p>';
+      }
+    }
+  </script>
+
+  <!-- Event Photos Modal -->
+  <div class="modal fade" id="eventPhotosModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="eventPhotosModalTitle">Event Photos</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Upload Photos Section -->
+          <div class="card card-one mb-4">
+            <div class="card-header">
+              <h6 class="card-title mb-0">Upload New Photos</h6>
+            </div>
+            <div class="card-body">
+              <form method="POST" enctype="multipart/form-data" id="uploadEventPhotosForm">
+                {% csrf_token %}
+                <input type="hidden" name="event_id" id="eventPhotosEventId">
+                <div class="mb-3">
+                  <label class="form-label">Select Photos</label>
+                  <input type="file" name="photos" class="form-control" multiple accept="image/*" required>
+                  <small class="text-muted">You can select multiple photos at once.</small>
+                </div>
+                <button type="submit" name="upload_event_photo" class="btn btn-primary">
+                  <i class="ri-upload-cloud-line"></i> Upload Photos
+                </button>
+              </form>
+            </div>
+          </div>
+          
+          <!-- Photos Gallery Section -->
+          <div class="card card-one">
+            <div class="card-header">
+              <h6 class="card-title mb-0">Event Photos</h6>
+            </div>
+            <div class="card-body">
+              <div id="eventPhotosContainer">
+                <p class="text-center text-muted">Click on an event to view its photos.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+{% endblock content %}
+

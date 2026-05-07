@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<body>
+  <!-- Sidebar -->
+  {% include '_partials/sidebar.html' %}
+
+  <!-- Header main -->
+  {% include '_partials/header_main.html' %}
+
+  <div class="main main-app p-3 p-lg-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <div>
+        <h4 class="main-title mb-0">Tournament Scheduler</h4>
+        <p class="text-secondary mb-0">Choose a sport, add teams (from the sport or custom names), and generate a single-elimination bracket</p>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- Left: Sport + Teams -->
+      <div class="col-lg-4">
+        <div class="card card-one mb-3">
+          <div class="card-header">
+            <h6 class="card-title mb-0">Sport</h6>
+          </div>
+          <div class="card-body">
+            <label class="form-label">Select sport</label>
+            <select class="form-select" id="sportSelect">
+              <option value="">-- Choose sport --</option>
+              {% for sport in sports %}
+              <option value="{{ sport.id }}" data-sport-type="{{ sport.sport_type }}">{{ sport.name }}</option>
+              {% endfor %}
+            </select>
+            <div id="teamsInSportSection" class="mt-3 d-none">
+              <label class="form-label mb-2">Teams in <span id="sportNameLabel"></span></label>
+              <div id="teamsInSportList" class="list-group list-group-flush mb-0"></div>
+              <p class="text-muted small mt-2 mb-0" id="noTeamsInSport" style="display:none;">No teams in this sport yet. Add custom names below.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card card-one">
+          <div class="card-header">
+            <h6 class="card-title mb-0">Bracket teams</h6>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Add custom team name</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="teamInput" placeholder="e.g. Team Alpha" maxlength="80">
+                <button type="button" class="btn btn-primary" id="addTeamBtn"><i class="ri-add-line"></i> Add</button>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Or paste list (one per line)</label>
+              <textarea class="form-control" id="teamPaste" rows="3" placeholder="Team A&#10;Team B"></textarea>
+              <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="pasteTeamsBtn">Add all from list</button>
+            </div>
+            <ul class="list-group list-group-flush mb-3" id="teamList"></ul>
+            <div class="d-flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-success" id="generateBtn" disabled><i class="ri-shuffle-line"></i> Generate Bracket</button>
+              <button type="button" class="btn btn-outline-secondary" id="clearTeamsBtn">Clear all</button>
+            </div>
+            <p class="text-muted small mb-0 mt-2">Need at least 2 teams. Byes are added automatically if the count is not a power of 2.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Bracket -->
+      <div class="col-lg-8">
+        <div class="card card-one" id="bracketCard">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">Bracket</h6>
+            <button type="button" class="btn btn-outline-primary btn-sm d-none" id="regenerateBtn"><i class="ri-refresh-line"></i> Randomize again</button>
+          </div>
+          <div class="card-body">
+            <div id="bracketPlaceholder" class="text-center text-muted py-5">
+              Add teams and click "Generate Bracket" to see the schedule.
+            </div>
+            <div id="bracketContainer" class="d-none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Team Modal -->
+  <div class="modal fade" id="editTeamModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit team</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editTeamId">
+          <div class="mb-3">
+            <label class="form-label">Team name</label>
+            <input type="text" class="form-control" id="editTeamName" maxlength="100">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Members</label>
+            <select class="form-select" id="editTeamMembers" multiple size="10">
+              <!-- filled by JS from /api/users/ -->
+            </select>
+            <small class="text-muted">Hold Ctrl/Cmd to select multiple. Add or remove players here.</small>
+          </div>
+          <div id="editTeamError" class="alert alert-danger d-none"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-white" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="editTeamSaveBtn">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const sportSelect = document.getElementById('sportSelect');
+      const teamsInSportSection = document.getElementById('teamsInSportSection');
+      const teamsInSportList = document.getElementById('teamsInSportList');
+      const sportNameLabel = document.getElementById('sportNameLabel');
+      const noTeamsInSport = document.getElementById('noTeamsInSport');
+      const teamInput = document.getElementById('teamInput');
+      const teamPaste = document.getElementById('teamPaste');
+      const teamList = document.getElementById('teamList');
+      const addTeamBtn = document.getElementById('addTeamBtn');
+      const pasteTeamsBtn = document.getElementById('pasteTeamsBtn');
+      const generateBtn = document.getElementById('generateBtn');
+      const clearTeamsBtn = document.getElementById('clearTeamsBtn');
+      const regenerateBtn = document.getElementById('regenerateBtn');
+      const bracketPlaceholder = document.getElementById('bracketPlaceholder');
+      const bracketContainer = document.getElementById('bracketContainer');
+      const editTeamModal = document.getElementById('editTeamModal');
+      const editTeamId = document.getElementById('editTeamId');
+      const editTeamName = document.getElementById('editTeamName');
+      const editTeamMembers = document.getElementById('editTeamMembers');
+      const editTeamError = document.getElementById('editTeamError');
+      const editTeamSaveBtn = document.getElementById('editTeamSaveBtn');
+
+      let teams = [];
+      let allUsers = [];
+
+      function getCookie(name) {
+        let v = null;
+        if (document.cookie && document.cookie !== '') {
+          document.cookie.split(';').forEach(function(c) {
+            var parts = c.trim().split('=');
+            if (parts[0] === name) v = decodeURIComponent(parts[1]);
+          });
+        }
+        return v || '';
+      }
+
+      function getCsrfHeader() {
+        return { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' };
+      }
+
+      function escapeHtml(s) {
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function getTeamDisplayName(t) {
+        return typeof t === 'string' ? t : (t && t.name);
+      }
+
+      function addTeam(nameOrObj) {
+        if (typeof nameOrObj === 'string') {
+          var trimmed = nameOrObj.trim();
+          if (!trimmed) return;
+          if (teams.some(function(t) { return getTeamDisplayName(t) === trimmed; })) return;
+          teams.push(trimmed);
+        } else {
+          if (!nameOrObj || !nameOrObj.name) return;
+          if (teams.some(function(t) { return t && t.fromDb && t.id === nameOrObj.id; })) return;
+          teams.push({ id: nameOrObj.id, name: nameOrObj.name, fromDb: true });
+        }
+        renderTeamList();
+      }
+
+      function removeTeam(index) {
+        teams.splice(index, 1);
+        renderTeamList();
+      }
+
+      function updateTeamInList(id, newName) {
+        teams.forEach(function(t) {
+          if (t && t.fromDb && t.id == id) t.name = newName;
+        });
+        renderTeamList();
+        var rounds = buildBracket();
+        if (rounds && rounds.length) renderBracket(rounds);
+      }
+
+      function renderTeamList() {
+        teamList.innerHTML = teams.map(function(t, i) {
+          var name = getTeamDisplayName(t);
+          var isDb = t && t.fromDb;
+          var editBtn = isDb ? '<button type="button" class="btn btn-sm btn-outline-primary ms-1 edit-team-btn" data-team-id="' + t.id + '" title="Edit team"><i class="ri-edit-line"></i></button>' : '';
+          return '<li class="list-group-item d-flex justify-content-between align-items-center">' +
+            '<span>' + escapeHtml(name) + (isDb ? ' <span class="badge bg-secondary">DB</span>' : '') + '</span>' +
+            '<span>' + editBtn +
+            '<button type="button" class="btn btn-sm btn-outline-danger" data-index="' + i + '" aria-label="Remove"><i class="ri-close-line"></i></button></span></li>';
+        }).join('') || '<li class="list-group-item text-muted">No teams yet</li>';
+        teamList.querySelectorAll('[data-index]').forEach(function(btn) {
+          btn.addEventListener('click', function() { removeTeam(parseInt(this.getAttribute('data-index'), 10)); });
+        });
+        teamList.querySelectorAll('.edit-team-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() { openEditTeamModal(parseInt(this.getAttribute('data-team-id'), 10)); });
+        });
+        generateBtn.disabled = teams.length < 2;
+      }
+
+      sportSelect.addEventListener('change', function() {
+        var opt = sportSelect.options[sportSelect.selectedIndex];
+        var sportId = sportSelect.value;
+        var sportType = opt ? opt.getAttribute('data-sport-type') : '';
+        if (!sportId) {
+          teamsInSportSection.classList.add('d-none');
+          return;
+        }
+        sportNameLabel.textContent = opt ? opt.textContent : '';
+        teamsInSportSection.classList.remove('d-none');
+        teamsInSportList.innerHTML = '<li class="list-group-item text-muted">Loading…</li>';
+        noTeamsInSport.style.display = 'none';
+        if (sportType === 'Team-Player') {
+          fetch('/api/competitors/?sport_id=' + encodeURIComponent(sportId), { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              teamsInSportList.innerHTML = '';
+              if (!data || data.length === 0) {
+                noTeamsInSport.style.display = 'block';
+                return;
+              }
+              data.forEach(function(team) {
+                var li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = '<span>' + escapeHtml(team.name) + '</span>' +
+                  '<button type="button" class="btn btn-sm btn-primary add-team-from-db-btn" data-team-id="' + team.id + '" data-team-name="' + escapeHtml(team.name).replace(/"/g, '&quot;') + '">Add to bracket</button>';
+                teamsInSportList.appendChild(li);
+              });
+              teamsInSportList.querySelectorAll('.add-team-from-db-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                  var name = btn.getAttribute('data-team-name');
+                  if (typeof name === 'string') {
+                    var div = document.createElement('div');
+                    div.innerHTML = name;
+                    name = div.textContent || name;
+                  }
+                  addTeam({ id: parseInt(btn.getAttribute('data-team-id'), 10), name: name, fromDb: true });
+                });
+              });
+            })
+            .catch(function() {
+              teamsInSportList.innerHTML = '<li class="list-group-item text-danger">Failed to load teams.</li>';
+            });
+        } else {
+          noTeamsInSport.textContent = 'This is a single-player sport. Add competitor names below.';
+          noTeamsInSport.style.display = 'block';
+          teamsInSportList.innerHTML = '';
+        }
+      });
+
+      function openEditTeamModal(teamId) {
+        editTeamId.value = teamId;
+        editTeamError.classList.add('d-none');
+        editTeamName.value = '';
+        editTeamMembers.innerHTML = '';
+        fetch('/api/team/' + teamId + '/', { credentials: 'same-origin' })
+          .then(function(r) { return r.json(); })
+          .then(function(team) {
+            editTeamName.value = team.name || '';
+            var memberIds = (team.member_ids || (team.members && team.members.map(function(m) { return m.id; })) || []);
+            allUsers.forEach(function(u) {
+              var opt = document.createElement('option');
+              opt.value = u.id;
+              opt.textContent = u.name + ' (' + u.email + ')';
+              if (memberIds.indexOf(u.id) !== -1) opt.selected = true;
+              editTeamMembers.appendChild(opt);
+            });
+            var modal = new bootstrap.Modal(editTeamModal);
+            modal.show();
+          })
+          .catch(function() {
+            editTeamError.textContent = 'Failed to load team.';
+            editTeamError.classList.remove('d-none');
+          });
+      }
+
+      editTeamSaveBtn.addEventListener('click', function() {
+        var id = editTeamId.value;
+        var name = editTeamName.value.trim();
+        var selected = Array.from(editTeamMembers.selectedOptions).map(function(o) { return parseInt(o.value, 10); });
+        editTeamError.classList.add('d-none');
+        if (!name) {
+          editTeamError.textContent = 'Team name is required.';
+          editTeamError.classList.remove('d-none');
+          return;
+        }
+        editTeamSaveBtn.disabled = true;
+        fetch('/api/team/' + id + '/update/', {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: getCsrfHeader(),
+          body: JSON.stringify({ name: name, members: selected })
+        })
+          .then(function(r) {
+            if (!r.ok) return r.json().then(function(err) { throw err; });
+            updateTeamInList(parseInt(id, 10), name);
+            bootstrap.Modal.getInstance(editTeamModal).hide();
+          })
+          .catch(function(e) {
+            editTeamError.textContent = (e && (e.name || e.detail)) ? (e.detail || e.name) : 'Failed to save.';
+            editTeamError.classList.remove('d-none');
+          })
+          .finally(function() { editTeamSaveBtn.disabled = false; });
+      });
+
+      addTeamBtn.addEventListener('click', function() {
+        addTeam(teamInput.value);
+        teamInput.value = '';
+        teamInput.focus();
+      });
+      teamInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); addTeamBtn.click(); }
+      });
+      pasteTeamsBtn.addEventListener('click', function() {
+        teamPaste.value.split(/\n/).map(function(s) { return s.trim(); }).filter(Boolean).forEach(addTeam);
+        teamPaste.value = '';
+      });
+      clearTeamsBtn.addEventListener('click', function() {
+        teams = [];
+        renderTeamList();
+        bracketPlaceholder.classList.remove('d-none');
+        bracketContainer.classList.add('d-none');
+        bracketContainer.innerHTML = '';
+        regenerateBtn.classList.add('d-none');
+      });
+
+      function nextPowerOf2(n) {
+        if (n <= 2) return 2;
+        var p = 2;
+        while (p < n) p *= 2;
+        return p;
+      }
+
+      function shuffleArray(arr) {
+        var a = arr.slice();
+        for (var i = a.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+        }
+        return a;
+      }
+
+      function buildBracket() {
+        if (teams.length < 2) return null;
+        var names = teams.map(function(t) { return getTeamDisplayName(t); });
+        var slotsCount = nextPowerOf2(names.length);
+        var shuffled = shuffleArray(names);
+        while (shuffled.length < slotsCount) shuffled.push('Bye');
+        var round1Matches = [];
+        for (var i = 0; i < shuffled.length; i += 2) {
+          round1Matches.push({
+            id: 'r1-' + (i / 2),
+            team1: shuffled[i],
+            team2: shuffled[i + 1],
+            winner: null
+          });
+        }
+        var rounds = [{ name: 'Round 1', matches: round1Matches }];
+        var prevMatches = round1Matches;
+        var roundIndex = 2;
+        while (prevMatches.length > 1) {
+          var nextMatches = [];
+          for (var i = 0; i < prevMatches.length; i += 2) {
+            var m1 = prevMatches[i], m2 = prevMatches[i + 1];
+            nextMatches.push({
+              id: 'r' + roundIndex + '-' + (i / 2),
+              team1: m1.id, team2: m2.id,
+              team1Label: 'Winner of Match ' + (i + 1), team2Label: 'Winner of Match ' + (i + 2),
+              winner: null
+            });
+          }
+          rounds.push({ name: nextMatches.length === 1 ? 'Final' : nextMatches.length === 2 ? 'Semi-finals' : 'Round ' + roundIndex, matches: nextMatches });
+          prevMatches = nextMatches;
+          roundIndex++;
+        }
+        return rounds;
+      }
+
+      function renderBracket(rounds) {
+        bracketPlaceholder.classList.add('d-none');
+        bracketContainer.classList.remove('d-none');
+        regenerateBtn.classList.remove('d-none');
+        var html = '<div class="bracket-wrapper">';
+        rounds.forEach(function(round) {
+          html += '<div class="bracket-round"><h6 class="round-title">' + escapeHtml(round.name) + '</h6>';
+          round.matches.forEach(function(m) {
+            var isPlaceholder = typeof m.team1 === 'string' && m.team1.indexOf('r') === 0 && m.team1.indexOf('-') > 0;
+            var t1 = isPlaceholder ? (m.team1Label || m.team1) : (m.team1 || '—');
+            var t2 = isPlaceholder ? (m.team2Label || m.team2) : (m.team2 || '—');
+            html += '<div class="bracket-match"><div class="match-slot">' + escapeHtml(t1) + '</div><div class="match-vs">vs</div><div class="match-slot">' + escapeHtml(t2) + '</div></div>';
+          });
+          html += '</div>';
+        });
+        html += '</div>';
+        bracketContainer.innerHTML = html;
+      }
+
+      generateBtn.addEventListener('click', function() {
+        var r = buildBracket();
+        if (r && r.length) renderBracket(r);
+      });
+      regenerateBtn.addEventListener('click', function() {
+        var r = buildBracket();
+        if (r && r.length) renderBracket(r);
+      });
+
+      fetch('/api/users/', { credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) { allUsers = data || []; })
+        .catch(function() { allUsers = []; });
+
+      renderTeamList();
+    })();
+  </script>
+
+  <style>
+    .bracket-wrapper { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+    .bracket-round { min-width: 200px; }
+    .round-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--bs-secondary); margin-bottom: 1rem; padding-bottom: 0.25rem; border-bottom: 2px solid var(--bs-border-color); }
+    .bracket-match { background: var(--bs-body-bg, #f8f9fa); border: 1px solid var(--bs-border-color); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; min-width: 220px; }
+    .match-slot { font-weight: 500; padding: 0.25rem 0; }
+    .match-vs { font-size: 0.75rem; color: var(--bs-secondary); text-align: center; padding: 0.2rem 0; }
+  </style>
+
+  {% include '_partials/inner_footer.html' %}
+</div>
+</body>
+{% endblock content %}
