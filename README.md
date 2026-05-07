@@ -101,12 +101,4 @@ Include screenshots here to showcase the user interface and features of your Spo
 
 <!-- Add more screenshots as needed -->
 
-## Contributing
 
-If you'd like to contribute to the project, please follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-# Sport-Management-System
-# Sport-Management-System
