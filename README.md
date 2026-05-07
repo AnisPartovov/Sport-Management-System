@@ -7,8 +7,6 @@
   - [Prerequisites](#prerequisites)
   - [Steps](#steps)
 - [Screenshots](#screenshots)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Overview
 
