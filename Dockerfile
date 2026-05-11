@@ -22,7 +22,7 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 8080
 
-CMD exec gunicorn core.wsgi:application \
+CMD python manage.py migrate --noinput && exec gunicorn core.wsgi:application \
     --bind 0.0.0.0:${PORT} \
     --workers 2 \
     --threads 4 \
